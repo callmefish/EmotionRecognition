@@ -11,8 +11,9 @@ import sklearn.metrics
 import itertools
 import shutil
 
+# hyper parameter of training
 parser = argparse.ArgumentParser(description='Speech Emotion Recognition Based on 3D CRNN')
-parser.add_argument('--num_epoch', default=11, type=int, help='The number of epoches for training.')
+parser.add_argument('--num_epoch', default=100, type=int, help='The number of epoches for training.')
 parser.add_argument('--num_classes', default=4, type=int, help='The number of emotion classes.')
 parser.add_argument('--batch_size', default=32, type=int, help='The number of samples in each batch.')
 parser.add_argument('--learning_rate', default=0.0001, type=float, help='learning rate of Adam optimizer')
@@ -26,21 +27,6 @@ arg = parser.parse_args()
 
 
 class model_training():
-    # def __init__(self):
-    #     self.num_epoch = 11
-    #     self.num_classes = 4
-    #     self.batch_size = 32
-    #     self.learning_rate = 0.0001
-    #     self.dropout_keep_prob = 0.5
-    #     self.traindata_path = '/content/IEMOCAP_4.pkl'
-    #     if os.path.exists('/content/logs/gradient_tape/'):
-    #         shutil.rmtree('/content/logs/gradient_tape/')
-    #     os.mkdir('/content/logs/gradient_tape/')
-        
-    #     self.log_dir = '/content/logs/gradient_tape/'
-    #     self.checkpoint = '/content/save/'
-    #     self.model_name = 'model_IEMOCAP_4.ckpt'
-
     def load_data(self, in_dir):
         f = open(in_dir, 'rb')
         Train_data, Train_label, Val_data, Val_label, Test_data, Test_label = pickle.load(f)
@@ -101,7 +87,7 @@ class model_training():
         cm = sklearn.metrics.confusion_matrix(testing_label, test_pred)
         # Log the confusion matrix as an image summary.
         figure = self.plot_confusion_matrix(cm, class_names=class_names)
-        cm_image = plot_to_image(figure)
+        cm_image = self.plot_to_image(figure)
 
         # Log the confusion matrix as an image summary.
         with file_writer_cm.as_default():
