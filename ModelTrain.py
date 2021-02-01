@@ -9,126 +9,143 @@ import io
 import matplotlib.pyplot as plt
 import sklearn.metrics
 import itertools
-
+import shutil
 
 parser = argparse.ArgumentParser(description='Speech Emotion Recognition Based on 3D CRNN')
 parser.add_argument('--num_epoch', default=11, type=int, help='The number of epoches for training.')
-parser.add_argument('--num_classes', default=6, type=int, help='The number of emotion classes.')
+parser.add_argument('--num_classes', default=4, type=int, help='The number of emotion classes.')
 parser.add_argument('--batch_size', default=32, type=int, help='The number of samples in each batch.')
 parser.add_argument('--learning_rate', default=0.0001, type=float, help='learning rate of Adam optimizer')
 parser.add_argument('--dropout_keep_prob', default=0.5, type=float, help='the prob of every unit keep in dropout layer')
-parser.add_argument('--traindata_path', default='/content/drive/My Drive/research/IEMOCAP_ns200.pkl', type=str, help='total dataset includes training set')
-parser.add_argument('--log_dir', default='/content/drive/My Drive/research/logs/gradient_tape/', type=str, help='tensorboard log dir')
-parser.add_argument('--checkpoint', default='/content/drive/My Drive/research/save/', type=str, help='the checkpoint dir')
-parser.add_argument('--model_name', default='model6.ckpt', type=str, help='model name')
+parser.add_argument('--traindata_path', default='/content/IEMOCAP_4.pkl', type=str, help='total dataset includes training set')
+parser.add_argument('--log_dir', default='/content/logs/gradient_tape/', type=str, help='tensorboard log dir')
+parser.add_argument('--checkpoint', default='/content/save/', type=str, help='the checkpoint dir')
+parser.add_argument('--model_name', default='model_IEMOCAP_4.ckpt', type=str, help='model name')
 
 arg = parser.parse_args()
 
 
-def load_data(in_dir):
-    f = open(in_dir, 'rb')
-    Train_data, Train_label, Val_data, Val_label, Test_data, Test_label = pickle.load(f)
-    return Train_data, Train_label, Val_data, Val_label, Test_data, Test_label
+class model_training():
+    # def __init__(self):
+    #     self.num_epoch = 11
+    #     self.num_classes = 4
+    #     self.batch_size = 32
+    #     self.learning_rate = 0.0001
+    #     self.dropout_keep_prob = 0.5
+    #     self.traindata_path = '/content/IEMOCAP_4.pkl'
+    #     if os.path.exists('/content/logs/gradient_tape/'):
+    #         shutil.rmtree('/content/logs/gradient_tape/')
+    #     os.mkdir('/content/logs/gradient_tape/')
+        
+    #     self.log_dir = '/content/logs/gradient_tape/'
+    #     self.checkpoint = '/content/save/'
+    #     self.model_name = 'model_IEMOCAP_4.ckpt'
 
-def plot_to_image(figure):
-  """Converts the matplotlib plot specified by 'figure' to a PNG image and
-  returns it. The supplied figure is closed and inaccessible after this call."""
-  # Save the plot to a PNG in memory.
-  buf = io.BytesIO()
-  plt.savefig(buf, format='png')
-  # Closing the figure prevents it from being displayed directly inside
-  # the notebook.
-  plt.close(figure)
-  buf.seek(0)
-  # Convert PNG buffer to TF image
-  image = tf.image.decode_png(buf.getvalue(), channels=4)
-  # Add the batch dimension
-  image = tf.expand_dims(image, 0)
-  return image
+    def load_data(self, in_dir):
+        f = open(in_dir, 'rb')
+        Train_data, Train_label, Val_data, Val_label, Test_data, Test_label = pickle.load(f)
+        return Train_data, Train_label, Val_data, Val_label, Test_data, Test_label
 
-def plot_confusion_matrix(cm, class_names):
-  """
-  Returns a matplotlib figure containing the plotted confusion matrix.
+    def plot_to_image(self, figure):
+        """Converts the matplotlib plot specified by 'figure' to a PNG image and
+        returns it. The supplied figure is closed and inaccessible after this call."""
+        # Save the plot to a PNG in memory.
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        # Closing the figure prevents it from being displayed directly inside
+        # the notebook.
+        plt.close(figure)
+        buf.seek(0)
+        # Convert PNG buffer to TF image
+        image = tf.image.decode_png(buf.getvalue(), channels=4)
+        # Add the batch dimension
+        image = tf.expand_dims(image, 0)
+        return image
 
-  Args:
-    cm (array, shape = [n, n]): a confusion matrix of integer classes
-    class_names (array, shape = [n]): String names of the integer classes
-  """
-  figure = plt.figure(figsize=(8, 8))
-  plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
-  plt.title("Confusion matrix")
-  plt.colorbar()
-  tick_marks = np.arange(len(class_names))
-  plt.xticks(tick_marks, class_names, rotation=45)
-  plt.yticks(tick_marks, class_names)
+    def plot_confusion_matrix(self, cm, class_names):
+        """
+        Returns a matplotlib figure containing the plotted confusion matrix.
 
-  # Compute the labels from the normalized confusion matrix.
-  labels = np.around(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis], decimals=2)
+        Args:
+            cm (array, shape = [n, n]): a confusion matrix of integer classes
+            class_names (array, shape = [n]): String names of the integer classes
+        """
+        figure = plt.figure(figsize=(8, 8))
+        plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+        plt.title("Confusion matrix")
+        plt.colorbar()
+        tick_marks = np.arange(len(class_names))
+        plt.xticks(tick_marks, class_names, rotation=45)
+        plt.yticks(tick_marks, class_names)
 
-  # Use white text if squares are dark; otherwise black.
-  threshold = cm.max() / 2.
-  for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-    color = "white" if cm[i, j] > threshold else "black"
-    plt.text(j, i, labels[i, j], horizontalalignment="center", color=color)
+        # Compute the labels from the normalized confusion matrix.
+        labels = np.around(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis], decimals=2)
 
-  plt.tight_layout()
-  plt.ylabel('True label')
-  plt.xlabel('Predicted label')
-  return figure
+        # Use white text if squares are dark; otherwise black.
+        threshold = cm.max() / 2.
+        for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+            color = "white" if cm[i, j] > threshold else "black"
+            plt.text(j, i, labels[i, j], horizontalalignment="center", color=color)
 
-def log_confusion_matrix(mymodel, testing_data, testing_label, file_writer_cm, epoch):
-  # Use the model to predict the values from the validation dataset.
-  test_pred_raw = mymodel.predict(testing_data)
-  test_pred = np.argmax(test_pred_raw, axis=1)
+        plt.tight_layout()
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+        return figure
 
-  # Calculate the confusion matrix.
-  cm = sklearn.metrics.confusion_matrix(testing_label, test_pred)
-  # Log the confusion matrix as an image summary.
-  figure = plot_confusion_matrix(cm, class_names=class_names)
-  cm_image = plot_to_image(figure)
+    def log_confusion_matrix(self, mymodel, testing_data, testing_label, file_writer_cm, epoch):
+        # Use the model to predict the values from the validation dataset.
+        test_pred_raw = mymodel.predict(testing_data)
+        test_pred = np.argmax(test_pred_raw, axis=1)
 
-  # Log the confusion matrix as an image summary.
-  with file_writer_cm.as_default():
-    tf.summary.image("Confusion Matrix", cm_image, step=epoch)
+        # Calculate the confusion matrix.
+        cm = sklearn.metrics.confusion_matrix(testing_label, test_pred)
+        # Log the confusion matrix as an image summary.
+        figure = self.plot_confusion_matrix(cm, class_names=class_names)
+        cm_image = plot_to_image(figure)
 
-@tf.function
-def train_step(model, data, labels):
-    with tf.GradientTape() as tape:
-        # training=True is only needed if there are layers with different
+        # Log the confusion matrix as an image summary.
+        with file_writer_cm.as_default():
+            tf.summary.image("Confusion Matrix", cm_image, step=epoch)
+
+    @tf.function
+    def train_step(self, model, data, labels):
+        with tf.GradientTape() as tape:
+            # training=True is only needed if there are layers with different
+            # behavior during training versus inference (e.g. Dropout).
+            predictions = model(data, training=True)
+            loss = loss_object(labels, predictions)
+        gradients = tape.gradient(loss, model.trainable_variables)
+        optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+
+        train_loss(loss)
+        train_accuracy(labels, predictions)
+
+    @tf.function
+    def test_step(self, model, data, labels):
+        # training=False is only needed if there are layers with different
         # behavior during training versus inference (e.g. Dropout).
-        predictions = model(data, training=True)
-        loss = loss_object(labels, predictions)
-    gradients = tape.gradient(loss, model.trainable_variables)
-    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+        predictions = model(data, training=False)
+        t_loss = loss_object(labels, predictions)
 
-    train_loss(loss)
-    train_accuracy(labels, predictions)
+        test_loss(t_loss)
+        test_accuracy(labels, predictions)
 
-@tf.function
-def test_step(model, data, labels):
-    # training=False is only needed if there are layers with different
-    # behavior during training versus inference (e.g. Dropout).
-    predictions = model(data, training=False)
-    t_loss = loss_object(labels, predictions)
+    @tf.function
+    def valid_step(self, model, data, labels):
+        # training=False is only needed if there are layers with different
+        # behavior during training versus inference (e.g. Dropout).
+        predictions = model(data, training=False)
+        t_loss = loss_object(labels, predictions)
 
-    test_loss(t_loss)
-    test_accuracy(labels, predictions)
-
-@tf.function
-def valid_step(model, data, labels):
-    # training=False is only needed if there are layers with different
-    # behavior during training versus inference (e.g. Dropout).
-    predictions = model(data, training=False)
-    t_loss = loss_object(labels, predictions)
-
-    valid_loss(t_loss)
-    valid_accuracy(labels, predictions)
+        valid_loss(t_loss)
+        valid_accuracy(labels, predictions)
     
 
 if __name__ == '__main__':
+    modelTrain = model_training()
     # load data
-    train_data, train_label, valid_data, valid_label, test_data, test_label = load_data(arg.traindata_path)
-    class_names = ['ang', "sad", "hap", "neu", "exc", "fru"]
+    train_data, train_label, valid_data, valid_label, test_data, test_label = modelTrain.load_data(arg.traindata_path)
+    class_names = ["hap", "ang", "sad", "neu"]
 
     train_ds = tf.data.Dataset.from_tensor_slices((train_data, train_label)).shuffle(10000).batch(arg.batch_size)
     valid_ds = tf.data.Dataset.from_tensor_slices((valid_data, valid_label)).batch(arg.batch_size)
@@ -165,18 +182,18 @@ if __name__ == '__main__':
         valid_accuracy.reset_states()
 
         for mel_data, labels in train_ds:
-            train_step(model, mel_data, labels)
+            modelTrain.train_step(model, mel_data, labels)
 
         with train_summary_writer.as_default():
             tf.summary.scalar('loss', train_loss.result(), step=epoch)
             tf.summary.scalar('accuracy', train_accuracy.result(), step=epoch)
         
         if epoch % 10 == 0:
-            log_confusion_matrix(model, valid_data, valid_label, file_writer_cm, epoch)
+            modelTrain.log_confusion_matrix(model, valid_data, valid_label, file_writer_cm, epoch)
             print("draw confusion matrix")
 
         for mel_data_valid, valid_labels in valid_ds:
-            valid_step(model, mel_data_valid, valid_labels)
+            modelTrain.valid_step(model, mel_data_valid, valid_labels)
         
         with valid_summary_writer.as_default():
             tf.summary.scalar('loss', valid_loss.result(), step=epoch)
